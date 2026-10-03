@@ -1,0 +1,36 @@
+name: pipeline-and-deploy
+on:
+  schedule: [{ cron: "17 */3 * * *" }]   # every 3 h (UTC); GitHub may delay
+  workflow_dispatch:
+  push: { branches: [main], paths: ["web/**", "pipeline/**", "config/**", "static_layers/out/**"] }
+permissions: { contents: read, pages: write, id-token: write, issues: write }
+concurrency: { group: pages, cancel-in-progress: false }
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q
+      - name: Build site
+        run: |
+          mkdir -p site && cp -r web/* site/
+          python -m pipeline.run --out site/data
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: "${{ steps.d.outputs.page_url }}" }
+    steps:
+      - id: d
+        uses: actions/deploy-pages@v4
+  alert:
+    needs: [build, deploy]
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh issue create --repo "$GITHUB_REPOSITORY" --title "Pipeline failed $(date -u +%F)" --body "See $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" || true
+        env: { GH_TOKEN: "${{ github.token }}" }

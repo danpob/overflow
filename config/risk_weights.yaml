@@ -1,0 +1,23 @@
+# Rule-based risk model weights (PRD §8). Inputs are normalised to 0-1.
+# Weights are re-normalised over the inputs that are actually available for a basin.
+weights:
+  level_ratio: 0.35        # station level vs bank
+  trend: 0.10              # rising / falling
+  rain_obs_72h: 0.15
+  rain_fcst_72h: 0.15
+  discharge_exceedance: 0.20
+  reservoir_fullness: 0.05 # not wired yet (dam endpoint TBD) -> ignored when missing
+normalisation:
+  level_ratio_floor_pct: 40     # below this % of bank => 0
+  level_ratio_ceiling_pct: 110  # at/above => 1
+  rain_72h_full_mm: 150
+  discharge_ratio_full: 3.0     # forecast peak / recent median at which term saturates
+propagation:
+  wave_speed_km_per_day: 100
+  hop_decay: 0.85
+terrain:
+  low_elev_m: 30         # at/below => factor_high
+  high_elev_m: 300       # at/above => factor_low
+  factor_high: 1.15
+  factor_low: 0.85
+bands: [20, 40, 60, 80]   # Low <20, Watch <40, Elevated <60, High <80, Severe >=80

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Risewise — Thailand Flood Tracker</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="map"></div>
+
+<header id="bar">
+  <div class="brand"><span class="logo">◢</span> Risewise <small>Thailand flood tracker</small></div>
+  <div id="fresh" class="badge">Loading…</div>
+</header>
+
+<aside id="panel" aria-label="Map key and layers">
+  <button id="collapse" aria-expanded="true" title="Hide / show key">Key ▾</button>
+  <div id="panel-body">
+    <p class="intro">Tap a <b>shaded area</b> for its flood-risk explanation, or a <b>dot</b> for one station's reading.</p>
+
+    <section>
+      <label class="lyr"><input type="checkbox" data-layer="basins" checked>
+        <span class="lyr-t">Flood-risk areas</span><span class="lyr-s">shaded land</span></label>
+      <p class="cap">Each shaded patch is a <b>drainage area</b>: all the land whose rain ends up in the same stretch of river. It is large, and scored as one unit. Colour = chance of flooding.</p>
+      <div class="row"><i class="area" style="background:#bfe3b4"></i>Low</div>
+      <div class="row"><i class="area" style="background:#f7ec9a"></i>Watch</div>
+      <div class="row"><i class="area" style="background:#fbbf66"></i>Elevated</div>
+      <div class="row"><i class="area" style="background:#ee6a4a"></i>High</div>
+      <div class="row"><i class="area" style="background:#a8222c"></i>Severe</div>
+    </section>
+
+    <section>
+      <label class="lyr"><input type="checkbox" data-layer="stations" checked>
+        <span class="lyr-t">Water-level stations</span><span class="lyr-s">purple dots</span></label>
+      <p class="cap">A sensor in a river. Colour = how full the river is compared with its banks.</p>
+      <div class="row"><i class="dot" style="background:#ddd8ee"></i>Under 50% of bank</div>
+      <div class="row"><i class="dot" style="background:#cbc9e2"></i>50–70%</div>
+      <div class="row"><i class="dot" style="background:#9e9ac8"></i>70–90%</div>
+      <div class="row"><i class="dot" style="background:#756bb1"></i>90–100% (nearly full)</div>
+      <div class="row"><i class="dot big" style="background:#54278f"></i>Over 100% (over the bank)</div>
+    </section>
+
+    <section>
+      <label class="lyr"><input type="checkbox" data-layer="flow" checked>
+        <span class="lyr-t">River flow</span><span class="lyr-s">moving lines</span></label>
+      <p class="cap">Dashes move downstream. Faster dashes = water rising faster.</p>
+      <div class="row"><i class="sw" style="background:#2c7fb8"></i>Falling</div>
+      <div class="row"><i class="sw" style="background:#8a94a0"></i>Steady</div>
+      <div class="row"><i class="sw" style="background:#f0a202"></i>Rising</div>
+      <div class="row"><i class="sw" style="background:#d7301f"></i>Rising fast</div>
+      <div class="row muted"><i class="sw thin" style="background:#9aa3ab"></i>No nearby station data</div>
+    </section>
+
+    <label class="lyr minor"><input type="checkbox" data-layer="provinces"> Province lines</label>
+  </div>
+</aside>
+
+<aside id="detail" hidden>
+  <button id="close" aria-label="Close">×</button>
+  <div id="detail-body"></div>
+</aside>
+
+<footer id="foot">
+  <strong>Not an official warning.</strong> Indicative only — follow
+  <a href="https://www.disaster.go.th" target="_blank" rel="noopener">DDPM</a>,
+  <a href="https://www.tmd.go.th" target="_blank" rel="noopener">TMD</a> and
+  <a href="https://www.thaiwater.net" target="_blank" rel="noopener">ThaiWater</a> for official information.
+  Data: ThaiWater (HII), Open-Meteo, HydroSHEDS, geoBoundaries · Basemap © OpenFreeMap © OpenStreetMap contributors.
+</footer>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

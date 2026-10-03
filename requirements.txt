@@ -1,0 +1,14 @@
+duckdb==1.5.6
+geopandas==1.2.0
+networkx==3.7
+numpy==2.5.3
+pandas==3.0.6
+pyarrow==25.0.1
+pydantic==2.13.5
+pyogrio==0.13.0
+pyproj==3.8.0
+pytest==9.1.1
+PyYAML==6.0.3
+requests==2.34.2
+ruff==0.16.10
+shapely==2.1.2
