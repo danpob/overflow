@@ -75,3 +75,6 @@ html[lang=th] body{font-family:"Sarabun","Noto Sans Thai",system-ui,-apple-syste
 @media(max-width:700px){#fresh{order:2}#lang{order:2}}
 .more{display:block;width:100%;margin-top:6px;padding:7px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--acc);font:600 13px system-ui;cursor:pointer}
 .wi .wd+.wd{margin-top:1px}
+.dia{display:inline-block;width:11px;height:11px;transform:rotate(45deg);margin:0 7px 0 7px;box-sizing:border-box}
+.dia.solid{background:#d7301f;border:1.5px solid #fff;box-shadow:0 0 0 1.5px rgba(27,31,42,.8)}
+.dia.hollow{background:transparent;border:2.5px solid #e08a1e;box-shadow:0 0 0 1.5px #fff}

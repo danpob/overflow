@@ -1,6 +1,6 @@
 # Overflow (Thailand Flood Tracker) — Progress & Plan
 
-Source: `thailand-flood-tracker-PRD.md` (Draft v0.1). Last updated: 3 Oct 2026 (evening).
+Source: `thailand-flood-tracker-PRD.md` (Draft v0.1). Last updated: 4 Oct 2026.
 Legend: `[ ]` todo · `[~]` in progress · `[x]` done · 🔒 blocked on user input · ⚠️ risk / needs verification
 
 ## 0. Status snapshot
@@ -85,6 +85,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · 🔒 blocked on user in
 - [x] Forecast day buttons (Today/+1/+2/+3) recolour the map and the open panel; "Heading your way" list ranks areas at Elevated+ within 3 days, with a "getting worse" filter
 - Decision (user): no historical view / past-days slider. History archive kept only as an optional later way to compute true 24 h trends (item 3)
 - Not done: rainfall/flood-extent/reservoir layers, true 24 h trend, back-test
+- [x] **Road crossings**: 715 crossings where motorway/trunk/primary/secondary road bridges (OpenStreetMap, 18,249 bridges scanned) pass within 450 m of a main-stem river (`static_layers/build_crossings.py` -> `static_layers/out/crossings.json`). Live state in `pipeline/transform/crossings.py` -> `web/data/crossings_live.json`. Diamond markers, nothing drawn unless needed: solid red = a station within 6 km (and connected along the river within 15 km) reads at least 100% of bank and 0.2 m over it (measured, Today only); hollow amber = its drainage area is forecast High or worse on the selected day (modelled). Zoom >= 7.5, overlapping markers hidden, click opens a panel (name/route, measured line, forecast line, 'not a closure notice'). No roads-to-watch list by decision; no GISTDA by decision.
 - Mobile: footer collapses to one line; key panel sits above it using the measured footer height
 
 ## 9. Log
@@ -98,8 +99,9 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · 🔒 blocked on user in
 - 2026-10-03 — Mobile fix: collapsible footer, key panel positioned above it. Progress file brought up to date.
 
 ## 10. Backlog / ideas
-- **Road-impact cues** (brainstorming): show where floods likely block key roads without highlighting the whole road network; reveal roads only for the selected area, at high risk, and for major roads.
+- ~~Road-impact cues~~ built as **road crossings** (see §8b). Possible follow-ups: observed flood extent or official closure feed as a third, stronger tier; district names for repeated province labels.
 - True 24 h trend (needs a rolling history archive in the pipeline; no user-facing history view).
 - Rainfall overlay, GISTDA observed flood extent, reservoir markers.
 - Calibration against a past flood event; tune risk thresholds.
 - Optional: finer drainage areas (level 8), shareable URLs.
+- 2026-10-04 — Road crossings feature built (OSM bridges x HydroRIVERS main stems x stations), tests added (10 pass).

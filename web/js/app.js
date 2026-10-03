@@ -4,6 +4,7 @@ const TREND_COLOR = { falling: "#0a6ee6", stable: "#8a94a0", rising: "#f0a202", 
 const RISK_COLORS = ["#bfe3b4", "#f7ec9a", "#fbbf66", "#ee6a4a", "#a8222c"];
 const $ = (s) => document.querySelector(s);
 let DAY = 0, RISK = null, META = null, PANEL = null;
+const CROSS = {};
 
 // ---------- i18n ----------
 let LANG = "en", STR = {}, PROV_TH = {};
@@ -103,6 +104,7 @@ map.on("load", async () => {
   ]);
   const basins = await getJSON("data/basins.geojson");
   const risk = await getJSON("data/basins_risk.json").catch(() => null);
+  const crossings = await getJSON("data/crossings_live.json").catch(() => []);
   META = meta; RISK = risk;
   freshness(meta);
   setBasemapLang();
@@ -163,12 +165,29 @@ map.on("load", async () => {
       "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.6, "circle-opacity": 1,
     },
   });
+  addDiamond("x-solid", true);
+  addDiamond("x-hollow", false);
+  for (const c of crossings) CROSS[c.id] = c;
+  map.addSource("crossings", {
+    type: "geojson",
+    data: { type: "FeatureCollection", features: crossings.map((c) => {
+      const lv = risk?.basins?.[c.basin]?.levels || [0, 0, 0, 0];
+      return { type: "Feature", id: c.id, properties: { id: c.id, t1: c.t1 ? 1 : 0, l0: lv[0], l1: lv[1], l2: lv[2], l3: lv[3] }, geometry: { type: "Point", coordinates: [c.lon, c.lat] } };
+    }) },
+  });
+  // overlapping markers are hidden by the map (solid ones win), so a dense city never turns into a pile of diamonds
+  map.addLayer({ id: "crossings-icon", type: "symbol", source: "crossings", minzoom: 7.5,
+    layout: { "icon-image": "x-hollow", "icon-allow-overlap": false, "icon-padding": 6,
+      "symbol-sort-key": ["case", ["==", ["get", "t1"], 1], 0, 1],
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 7.5, 0.65, 10, 1] } });
+  updateCrossings();
   animateFlow();
 
   // --- layer toggles
   const groups = {
     flow: () => map.getStyle().layers.filter((l) => l.id.startsWith("flow-")).map((l) => l.id),
     stations: () => ["stations-halo", "stations-circle"],
+    crossings: () => ["crossings-icon"],
     basins: () => ["basins-fill", "basins-line"],
     provinces: () => ["provinces-line"],
   };
@@ -185,11 +204,17 @@ map.on("load", async () => {
     map.on("mouseenter", id, () => (map.getCanvas().style.cursor = "pointer"));
     map.on("mouseleave", id, () => (map.getCanvas().style.cursor = ""));
   };
-  pointer("stations-circle"); pointer("basins-fill");
-  map.on("click", "stations-circle", (e) => { e.originalEvent.stopPropagation_ = true; showStation(e.features[0].properties); });
+  pointer("stations-circle"); pointer("basins-fill"); pointer("crossings-icon");
+  map.on("click", "crossings-icon", (e) => { e.originalEvent.stopPropagation_ = true; showCrossing(e.features[0].properties.id); });
+  map.on("click", "stations-circle", (e) => {
+    if (e.originalEvent.stopPropagation_) return;                 // a crossing marker (drawn on top) was clicked
+    if (map.queryRenderedFeatures(e.point, { layers: ["crossings-icon"] }).length) return;
+    e.originalEvent.stopPropagation_ = true;
+    showStation(e.features[0].properties);
+  });
   map.on("click", "basins-fill", (e) => {
     if (e.defaultPrevented || e.originalEvent.stopPropagation_) return;
-    if (map.queryRenderedFeatures(e.point, { layers: ["stations-circle"] }).length) return;
+    if (map.queryRenderedFeatures(e.point, { layers: ["stations-circle", "crossings-icon"] }).length) return;
     const prov = map.queryRenderedFeatures(e.point, { layers: ["provinces-hit"] })[0];
     showBasin(e.features[0].properties, prov?.properties.name);
   });
@@ -266,7 +291,8 @@ function setDay(d) {
   DAY = d;
   document.querySelectorAll("#days button").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.d === d));
   map.setPaintProperty("basins-fill", "fill-color", levelExpr("l" + d));
-  if (PANEL?.k === "basin") renderPanel();   // keep an open panel in step
+  updateCrossings();
+  if (PANEL?.k === "basin" || PANEL?.k === "crossing") renderPanel();   // keep an open panel in step
 }
 
 // ---------- driver sentences (data carries structure, text is made here) ----------
@@ -285,6 +311,28 @@ function fmtDriver(d) {
   }
 }
 
+// ---------- road crossings ----------
+// Diamond markers (not circles, so they can't be mistaken for stations): solid = measured, hollow = modelled.
+function addDiamond(name, solid) {
+  const S = 44, c = document.createElement("canvas");
+  c.width = c.height = S;
+  const g = c.getContext("2d"), m = S / 2, r = 15;
+  const path = (k) => { g.beginPath(); g.moveTo(m, m - k); g.lineTo(m + k, m); g.lineTo(m, m + k); g.lineTo(m - k, m); g.closePath(); };
+  path(r + 4); g.fillStyle = "rgba(27,31,42,.85)"; g.fill();
+  path(r + 1.5); g.fillStyle = "#fff"; g.fill();
+  if (solid) { path(r - 3); g.fillStyle = "#d7301f"; g.fill(); }
+  else { path(r - 3); g.fillStyle = "#e08a1e"; g.fill(); path(r - 8); g.fillStyle = "#fff"; g.fill(); }
+  map.addImage(name, g.getImageData(0, 0, S, S), { pixelRatio: 2 });
+}
+
+// Today: measured (station over its bank nearby) or modelled High+. Later days: modelled only.
+function updateCrossings() {
+  if (!map.getLayer("crossings-icon")) return;
+  const l = ["get", "l" + DAY];
+  map.setFilter("crossings-icon", DAY === 0 ? ["any", ["==", ["get", "t1"], 1], [">=", l, 3]] : [">=", l, 3]);
+  map.setLayoutProperty("crossings-icon", "icon-image", DAY === 0 ? ["case", ["==", ["get", "t1"], 1], "x-solid", "x-hollow"] : "x-hollow");
+}
+
 // ---------- panels ----------
 function closePanel() {
   PANEL = null;
@@ -297,14 +345,40 @@ function renderPanel() {
   if (PANEL.k === "watch") renderWatchlist();
   else if (PANEL.k === "basin") renderBasin();
   else if (PANEL.k === "station") renderStation();
+  else if (PANEL.k === "crossing") renderCrossing();
 }
 
+function showCrossing(id) { PANEL = { k: "crossing", id }; map.setFilter("basin-highlight", ["==", ["get", "hybas_id"], -1]); renderCrossing(); }
 function showStation(p) { PANEL = { k: "station", p }; map.setFilter("basin-highlight", ["==", ["get", "hybas_id"], -1]); renderStation(); }
 function showWatchlist() { PANEL = { k: "watch", more: false }; map.setFilter("basin-highlight", ["==", ["get", "hybas_id"], -1]); renderWatchlist(); }
 function showBasin(p, where, fromList = false) {
   PANEL = { k: "basin", p, where, fromList: fromList || (PANEL?.k === "basin" && PANEL.fromList) };
   map.setFilter("basin-highlight", ["==", ["get", "hybas_id"], +p.hybas_id]);
   renderBasin();
+}
+
+function renderCrossing() {
+  const c = CROSS[PANEL.id];
+  if (!c) return;
+  const ref = c.ref ? (LANG === "th" ? c.ref : "Route " + c.ref) : "";
+  let title = LANG === "th" ? c.name_th || c.name_en : c.name_en;
+  let extra = "";
+  if (!title || (LANG === "en" && THAI_RE.test(title))) { extra = LANG === "en" && c.name_th ? c.name_th : ""; title = ref || t("x_title_fallback"); }
+  else if (ref) extra = ref;
+  const lv = RISK?.basins?.[c.basin]?.levels?.[DAY];
+  const lines = [];
+  if (DAY === 0 && c.t1) {
+    const x = c.t1, st = LANG === "th" ? x.th || x.en : (THAI_RE.test(x.en) ? x.th : x.en);
+    lines.push(x.dir === "here"
+      ? t("x_measured0", { st: esc(st), pct: x.pct, over: x.over_m.toFixed(1) })
+      : t("x_measured", { st: esc(st), pct: x.pct, over: x.over_m.toFixed(1), km: x.km, dir: t("x_dir_" + x.dir) }));
+  }
+  if (lv != null && (lv >= 3 || !lines.length)) lines.push(t("x_modelled", { lvl: lvlName(lv), day: DAY === 0 ? t("x_day_today") : t("x_day_on", { d: dayName(DAY) }) }));
+  $("#detail-body").innerHTML = `
+    <h2>${esc(title)}</h2><div class="sub">${esc([extra, c.len_m ? c.len_m + " m" : ""].filter(Boolean).join(" · "))}</div>
+    ${lines.map((x) => `<div class="sub" style="color:var(--fg)">${x}</div>`).join("") || `<div class="sub">${t("x_hollow")}</div>`}
+    <div class="sub" style="margin-top:10px">${t("x_howto")}</div>`;
+  $("#detail").hidden = false;
 }
 
 function renderStation() {

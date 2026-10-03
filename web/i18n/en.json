@@ -79,5 +79,21 @@
   "w_rising": "▲ Risk rising to {lvl} by {day}",
   "w_up": "Upstream area near {prov} is at {lvl} risk — peak reaches here in ~{h} h",
   "day_plus_1": "+1 day",
-  "day_plus_n": "+{n} days"
+  "day_plus_n": "+{n} days",
+  "lay_cross": "Road crossings",
+  "lay_cross_s": "diamonds",
+  "cap_cross": "Where a major road crosses a river. Shown only when something is wrong nearby, and only once you zoom in. Not a road-closure notice.",
+  "x_solid": "Water measured over the bank nearby",
+  "x_hollow": "Area forecast High or worse",
+  "x_title_fallback": "Road crossing",
+  "x_measured": "Measured: <b>{st}</b> reads {pct}% of its bank — {over} m over it — {km} km {dir}.",
+  "x_measured0": "Measured: <b>{st}</b> reads {pct}% of its bank — {over} m over it — at this crossing.",
+  "x_dir_upstream": "upstream",
+  "x_dir_downstream": "downstream",
+  "x_dir_nearby": "away on the river",
+  "x_modelled": "Forecast: the drainage area is at <b>{lvl}</b> risk {day}.",
+  "x_day_today": "today",
+  "x_day_on": "on {d}",
+  "x_howto": "This shows water near the crossing, not whether the road is open or closed. Check official road notices (Department of Highways, Department of Rural Roads) before travelling.",
+  "x_over_unknown": "over its bank"
 }

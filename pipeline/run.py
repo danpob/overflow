@@ -9,7 +9,7 @@ from pathlib import Path
 from pipeline.model import risk
 from pipeline.publish import gold
 from pipeline.sources import openmeteo, thaiwater
-from pipeline.transform import network
+from pipeline.transform import crossings, network
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -44,6 +44,9 @@ def build_risk(L, snapped, out, layers):
     res = risk.compute(L.basins, inputs, L.graph_basins, names, provs)
     (out / "basins_risk.json").write_text(json.dumps({"basins": res}, ensure_ascii=False, separators=(",", ":")))
     layers["risk"] = {"status": "ok" if rain else "stale", "basins": len(res)}
+    live = crossings.build(L, snapped, {b: r["levels"] for b, r in res.items()})
+    (out / "crossings_live.json").write_text(json.dumps(live, ensure_ascii=False, separators=(",", ":")))
+    layers["crossings"] = {"status": "ok", "shown": len(live), "measured": sum(1 for c in live if c["t1"])}
 
 
 def main(argv=None) -> int:
