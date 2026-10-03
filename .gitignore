@@ -6,3 +6,4 @@ static_layers/raw/
 .DS_Store
 .pytest_cache/
 .ruff_cache/
+.tools/
