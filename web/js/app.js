@@ -4,7 +4,7 @@ const TREND_COLOR = { falling: "#0a6ee6", stable: "#8a94a0", rising: "#f0a202", 
 const RISK_COLORS = ["#bfe3b4", "#f7ec9a", "#fbbf66", "#ee6a4a", "#a8222c"];
 const $ = (s) => document.querySelector(s);
 let DAY = 0, RISK = null, META = null, PANEL = null;
-const CROSS = {};
+const CROSS = {}, STATIONS = {};
 
 // ---------- i18n ----------
 let LANG = "en", STR = {}, PROV_TH = {};
@@ -105,6 +105,8 @@ map.on("load", async () => {
   const basins = await getJSON("data/basins.geojson");
   const risk = await getJSON("data/basins_risk.json").catch(() => null);
   const crossings = await getJSON("data/crossings_live.json").catch(() => []);
+  const khlongs = await getJSON("data/khlongs_live.json").catch(() => ({ type: "FeatureCollection", features: [] }));
+  for (const st of stations) STATIONS[st.id] = st;
   META = meta; RISK = risk;
   freshness(meta);
   setBasemapLang();
@@ -150,6 +152,11 @@ map.on("load", async () => {
     map.addLayer({ id: "flow-anim-" + tr, type: "line", source: "rivers", filter: ["==", ["get", "trend"], tr],
       paint: { "line-color": "#ffffff", "line-width": ["*", ["get", "w"], 0.55], "line-opacity": 0.9, "line-dasharray": [0, 4, 3] } });
   }
+  // khlongs / small rivers: drawn only while their station is at 90%+ of bank, same colours as the dots, no arrows
+  map.addSource("khlongs", { type: "geojson", data: khlongs });
+  map.addLayer({ id: "khlongs-line", type: "line", source: "khlongs", layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": pctColorExpr("pct"), "line-opacity": 0.92,
+      "line-width": ["interpolate", ["linear"], ["zoom"], 5, 2.5, 8, 4, 11, 6] } });
   // dots sit on a dark halo + white ring so they stay readable on top of the shaded risk areas
   const over = ["case", [">=", ["coalesce", ["get", "pct"], 0], 100]];
   // zoom must be the top-level input, so the optional extra (halo width) is added inside each stop
@@ -188,6 +195,7 @@ map.on("load", async () => {
     flow: () => map.getStyle().layers.filter((l) => l.id.startsWith("flow-")).map((l) => l.id),
     stations: () => ["stations-halo", "stations-circle"],
     crossings: () => ["crossings-icon"],
+    khlongs: () => ["khlongs-line"],
     basins: () => ["basins-fill", "basins-line"],
     provinces: () => ["provinces-line"],
   };
@@ -204,7 +212,13 @@ map.on("load", async () => {
     map.on("mouseenter", id, () => (map.getCanvas().style.cursor = "pointer"));
     map.on("mouseleave", id, () => (map.getCanvas().style.cursor = ""));
   };
-  pointer("stations-circle"); pointer("basins-fill"); pointer("crossings-icon");
+  pointer("stations-circle"); pointer("basins-fill"); pointer("crossings-icon"); pointer("khlongs-line");
+  map.on("click", "khlongs-line", (e) => {
+    if (e.originalEvent.stopPropagation_) return;
+    if (map.queryRenderedFeatures(e.point, { layers: ["stations-circle", "crossings-icon"] }).length) return;
+    const st = STATIONS[e.features[0].properties.sid];
+    if (st) { e.originalEvent.stopPropagation_ = true; showStation(st); }
+  });
   map.on("click", "crossings-icon", (e) => { e.originalEvent.stopPropagation_ = true; showCrossing(e.features[0].properties.id); });
   map.on("click", "stations-circle", (e) => {
     if (e.originalEvent.stopPropagation_) return;                 // a crossing marker (drawn on top) was clicked
@@ -214,7 +228,7 @@ map.on("load", async () => {
   });
   map.on("click", "basins-fill", (e) => {
     if (e.defaultPrevented || e.originalEvent.stopPropagation_) return;
-    if (map.queryRenderedFeatures(e.point, { layers: ["stations-circle", "crossings-icon"] }).length) return;
+    if (map.queryRenderedFeatures(e.point, { layers: ["stations-circle", "crossings-icon", "khlongs-line"] }).length) return;
     const prov = map.queryRenderedFeatures(e.point, { layers: ["provinces-hit"] })[0];
     showBasin(e.features[0].properties, prov?.properties.name);
   });

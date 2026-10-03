@@ -86,6 +86,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · 🔒 blocked on user in
 - Decision (user): no historical view / past-days slider. History archive kept only as an optional later way to compute true 24 h trends (item 3)
 - Not done: rainfall/flood-extent/reservoir layers, true 24 h trend, back-test
 - [x] **Road crossings**: 715 crossings where motorway/trunk/primary/secondary road bridges (OpenStreetMap, 18,249 bridges scanned) pass within 450 m of a main-stem river (`static_layers/build_crossings.py` -> `static_layers/out/crossings.json`). Live state in `pipeline/transform/crossings.py` -> `web/data/crossings_live.json`. Diamond markers, nothing drawn unless needed: solid red = a station within 6 km (and connected along the river within 15 km) reads at least 100% of bank and 0.2 m over it (measured, Today only); hollow amber = its drainage area is forecast High or worse on the selected day (modelled). Zoom >= 7.5, overlapping markers hidden, click opens a panel (name/route, measured line, forecast line, 'not a closure notice'). No roads-to-watch list by decision; no GISTDA by decision.
+- [x] **Khlongs & small rivers**: 283 stations are not on a main-stem river. `static_layers/build_khlongs.py` matches each to a line: 101 by waterway name in the OpenStreetMap Thailand extract (exact name, or same core name with another type word such as แม่น้ำ/คลอง/ห้วย, within 6 km) and 145 more to the nearest HydroRIVERS small stream within 500 m (marked `approx`); 37 have none (name not in OSM and no stream nearby). Live: `pipeline/transform/khlongs.py` publishes a stretch (up to 5 km) only while its station reads >= 90% of bank; coloured with the station scale, no outline, no arrows (khlong flow is gate/pump controlled). Click opens the station panel. 19 stretches live on 4 Oct.
 - Mobile: footer collapses to one line; key panel sits above it using the measured footer height
 
 ## 9. Log
@@ -104,4 +105,6 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · 🔒 blocked on user in
 - Rainfall overlay, GISTDA observed flood extent, reservoir markers.
 - Calibration against a past flood event; tune risk thresholds.
 - Optional: finer drainage areas (level 8), shareable URLs.
+- Khlong follow-ups: crossings on flagged khlongs (road bridges over them); stations whose khlong is not in OpenStreetMap still show only as dots.
 - 2026-10-04 — Road crossings feature built (OSM bridges x HydroRIVERS main stems x stations), tests added (10 pass).
+- 2026-10-04 — Khlong stretches built (OSM name match + HydroRIVERS fallback), tests added (13 pass).

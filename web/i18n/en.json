@@ -95,5 +95,10 @@
   "x_day_today": "today",
   "x_day_on": "on {d}",
   "x_howto": "This shows water near the crossing, not whether the road is open or closed. Check official road notices (Department of Highways, Department of Rural Roads) before travelling.",
-  "x_over_unknown": "over its bank"
+  "x_over_unknown": "over its bank",
+  "lay_khl": "Khlongs & small rivers",
+  "lay_khl_s": "coloured lines",
+  "cap_khl": "Drawn only while a station on that khlong reads 90% of its bank or more, in the station colours. Positions can be approximate. No arrows: khlong flow is often controlled by gates and pumps.",
+  "khl_a": "90–100% of bank",
+  "khl_b": "Over 100% (over the bank)"
 }

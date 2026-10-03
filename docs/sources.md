@@ -7,3 +7,5 @@
 | HydroRIVERS v10 (Asia) | `data.hydrosheds.org/file/HydroRIVERS/HydroRIVERS_v10_as_shp.zip` | open download | unzip to `static_layers/raw/rivers/` |
 | HydroBASINS lev07 (Asia) | `data.hydrosheds.org/file/HydroBASINS/standard/hybas_as_lev07_v1c.zip` | open download | unzip to `static_layers/raw/basins7/` |
 | geoBoundaries THA ADM1 | geoBoundaries gbOpen (simplified) | open | save as `static_layers/raw/provinces.geojson` |
+| OpenStreetMap bridges (Overpass) | `overpass-api.de` | open (ODbL) | major-road bridges, one-time download for `static_layers/build_crossings.py` |
+| OpenStreetMap Thailand extract | `download.geofabrik.de/asia/thailand-latest.osm.pbf` (328 MB) | open (ODbL) | named waterways for `static_layers/build_khlongs.py`; save as `static_layers/raw/thailand-latest.osm.pbf` (git-ignored) |
