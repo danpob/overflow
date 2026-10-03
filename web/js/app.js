@@ -419,6 +419,18 @@ function renderBasin() {
   const bk = $("#back"); if (bk) bk.onclick = showWatchlist;
 }
 
+// ---------- footer: keep the key and map controls clear of it; on phones it collapses to one line ----------
+const foot = $("#foot");
+const syncFootHeight = () => document.documentElement.style.setProperty("--foot-h", foot.offsetHeight + "px");
+if ("ResizeObserver" in window) new ResizeObserver(syncFootHeight).observe(foot);
+syncFootHeight();
+foot.addEventListener("click", (e) => {
+  if (innerWidth > 700) return;
+  if (e.target.closest("a") && foot.classList.contains("open")) return;   // links work once expanded
+  e.preventDefault();
+  foot.classList.toggle("open");
+});
+
 // ---------- boot ----------
 document.querySelectorAll("#lang button").forEach((b) => (b.onclick = () => setLang(b.dataset.lang)));
 var langReady = Promise.all([fetch("i18n/provinces_th.json").then((r) => r.json()).catch(() => ({})), setLang(storedLang(), true)])

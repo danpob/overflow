@@ -32,12 +32,15 @@ html,body{margin:0;height:100%;font:14px/1.4 system-ui,-apple-system,"Segoe UI",
 .pill{display:inline-block;padding:2px 9px;border-radius:99px;color:#fff;font-weight:600;font-size:12px}
 #foot{position:fixed;bottom:0;left:0;right:0;padding:6px 16px;background:var(--card);border-top:1px solid var(--line);font-size:11px;color:var(--mut);z-index:5}
 #foot a{color:var(--acc)}
-.maplibregl-ctrl-bottom-left,.maplibregl-ctrl-bottom-right{margin-bottom:34px}
+.maplibregl-ctrl-bottom-left,.maplibregl-ctrl-bottom-right{margin-bottom:calc(var(--foot-h,30px) + 4px)}
 @media(max-width:700px){
   .brand small{display:none}
-  #panel{top:auto;bottom:40px;width:auto;left:8px;right:8px;max-height:46%}
+  #panel{top:auto;bottom:calc(var(--foot-h,34px) + 8px);width:auto;left:8px;right:8px;max-height:min(60%,calc(100% - var(--bar-h) - var(--foot-h,34px) - 24px))}
   #detail{top:calc(var(--bar-h) + 4px);left:8px;right:8px;width:auto;max-height:44%}
-  #foot{font-size:10px}
+  #foot{font-size:11px;cursor:pointer;padding:8px 36px 8px 12px}
+  #foot:not(.open){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #foot::after{content:"▴";position:absolute;right:14px;top:7px;font-size:12px;color:var(--mut)}
+  #foot.open::after{content:"▾"}
 }
 
 #days{display:flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}
