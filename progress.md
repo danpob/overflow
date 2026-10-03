@@ -5,7 +5,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · 🔒 blocked on user in
 
 ## 0. Status snapshot
 - Current phase: **Local prototype built (Phase 0–2 core). Not yet pushed to GitHub.**
-- Repo name: `risewise` (local git initialised on `main`, nothing committed/pushed yet)
+- Repo name: `overflow` (renamed from Risewise on 3 Oct 2026; local git on `main`, nothing pushed yet)
 - Open: visual check in browser, GitHub push, Phase 3 items, dam endpoint, HAND terrain layer
 
 ## 1. Working assumptions (used unless the user says otherwise)
@@ -101,3 +101,4 @@ See the end of the chat reply; tracked here so they are not lost.
 - 2026-10-03 — Added forecast day buttons and Heading-your-way watchlist; dropped historical slider.
 - 2026-10-03 — Added English/Thai language toggle (i18n JSON files, structured risk reasons, Thai province names).
 - 2026-10-03 — "Heading your way" now scoped to the map view, closed by default; incoming = risk rising >=5 pts (Elevated+) or an Elevated+ upstream peak arriving within 72 h; capped at 8 with Show more; count of already-High steady areas shown as a summary.
+- 2026-10-03 — App renamed from Risewise to Overflow.

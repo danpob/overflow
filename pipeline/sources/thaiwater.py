@@ -11,7 +11,7 @@ import requests
 from pydantic import BaseModel, ValidationError
 
 BASE = "https://api-v3.thaiwater.net/api/v1/thaiwater30/public"
-UA = {"User-Agent": "Mozilla/5.0 (risewise flood tracker; non-commercial)"}
+UA = {"User-Agent": "Mozilla/5.0 (overflow flood tracker; non-commercial)"}
 
 
 class SourceError(RuntimeError):

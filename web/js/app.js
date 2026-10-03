@@ -242,6 +242,7 @@ function animateFlow() {
 }
 
 // ---------- day buttons ----------
+const dayPlus = (n) => (n === 1 ? t("day_plus_1") : t("day_plus_n", { n }));
 const dayName = (d) => {
   if (d === 0) return t("day_today");
   const dt = new Date(new Date(META.generated_at).getTime() + d * 864e5);
@@ -250,7 +251,7 @@ const dayName = (d) => {
 
 function renderDays() {
   const box = $("#days");
-  box.innerHTML = [0, 1, 2, 3].map((d) => `<button data-d="${d}" aria-pressed="${d === DAY}">${d === 0 ? t("day_today") : dayName(d) + " +" + d}</button>`).join("");
+  box.innerHTML = [0, 1, 2, 3].map((d) => `<button data-d="${d}" aria-pressed="${d === DAY}">${d === 0 ? t("day_today") : dayPlus(d)}</button>`).join("");
   box.style.display = RISK ? "" : "none";
 }
 
@@ -410,7 +411,7 @@ function renderBasin() {
     <h2>${where ? esc(t("near", { x: provName(where) })) : t("area_h")}</h2>
     <div class="sub">${t("area_desc", { river, provs: esc(provs) })}</div>
     <div class="sub">${esc(when)} <span class="pill" style="background:${pillBg};color:${lvl === 1 ? "#222" : "#fff"}">${lvlName(lvl)} · ${r.scores[DAY]}</span></div>
-    <table>${r.scores.map((s, i) => `<tr class="${i === DAY ? "sel" : ""}"><td>${i === 0 ? t("today") : esc(dayName(i)) + " (+" + i + ")"}</td><td>${lvlName(r.levels[i])} (${s})</td></tr>`).join("")}</table>
+    <table>${r.scores.map((s, i) => `<tr class="${i === DAY ? "sel" : ""}"><td>${i === 0 ? t("today") : esc(dayPlus(i)) + " (" + esc(dayName(i)) + ")"}</td><td>${lvlName(r.levels[i])} (${s})</td></tr>`).join("")}</table>
     <h3 style="font-size:12px;margin:12px 0 2px;color:var(--mut)">${t("why")}</h3><ol>${drivers}</ol>
     ${ups ? `<h3 style="font-size:12px;margin:12px 0 2px;color:var(--mut)">${t("upstream_h")}</h3><ol>${ups}</ol>` : ""}
     <div class="sub" style="margin-top:10px">${t("disclaimer")}</div>`;

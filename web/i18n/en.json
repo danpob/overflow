@@ -1,5 +1,5 @@
 {
-  "title": "Risewise — Thailand Flood Tracker",
+  "title": "Overflow — Thailand Flood Tracker",
   "brand_sub": "Thailand flood tracker",
   "loading": "Loading…",
   "day_today": "Today",
@@ -77,5 +77,7 @@
   "w_zoom": "Zoom in to your area to narrow this list.",
   "w_more": "Show {n} more",
   "w_rising": "▲ Risk rising to {lvl} by {day}",
-  "w_up": "Upstream area near {prov} is at {lvl} risk — peak reaches here in ~{h} h"
+  "w_up": "Upstream area near {prov} is at {lvl} risk — peak reaches here in ~{h} h",
+  "day_plus_1": "+1 day",
+  "day_plus_n": "+{n} days"
 }
