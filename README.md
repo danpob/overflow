@@ -1,5 +1,7 @@
 # Overflow — Thailand Flood Tracker
 
+Live site: https://danpob.github.io/overflow/ · refreshed about every 3 hours by GitHub Actions.
+
 Map of where flood water in Thailand is heading and which river sub-basins are most at risk over the next 3 days. Public data only; static site, no server or database. **Not an official warning.** See `thailand-flood-tracker-PRD.md` and `progress.md`.
 
 ```bash

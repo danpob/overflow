@@ -4,7 +4,7 @@ Source: `thailand-flood-tracker-PRD.md` (Draft v0.1). Last updated: 3 Oct 2026.
 Legend: `[ ]` todo · `[~]` in progress · `[x]` done · 🔒 blocked on user input · ⚠️ risk / needs verification
 
 ## 0. Status snapshot
-- Current phase: **Local prototype built (Phase 0–2 core). Not yet pushed to GitHub.**
+- Current phase: **Prototype live on GitHub Pages: https://danpob.github.io/overflow/ (repo danpob/overflow, public).**
 - Repo name: `overflow` (renamed from Risewise on 3 Oct 2026; local git on `main`, nothing pushed yet)
 - Open: visual check in browser, GitHub push, Phase 3 items, dam endpoint, HAND terrain layer
 
@@ -102,3 +102,4 @@ See the end of the chat reply; tracked here so they are not lost.
 - 2026-10-03 — Added English/Thai language toggle (i18n JSON files, structured risk reasons, Thai province names).
 - 2026-10-03 — "Heading your way" now scoped to the map view, closed by default; incoming = risk rising >=5 pts (Elevated+) or an Elevated+ upstream peak arriving within 72 h; capped at 8 with Show more; count of already-High steady areas shown as a summary.
 - 2026-10-03 — App renamed from Risewise to Overflow.
+- 2026-10-03 — Published: repo danpob/overflow (public), Pages via Actions, first scheduled-pipeline run succeeded. Commits use the GitHub noreply address. Fixed station halo layer (invalid zoom expression).

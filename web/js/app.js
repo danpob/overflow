@@ -149,12 +149,12 @@ map.on("load", async () => {
       paint: { "line-color": "#ffffff", "line-width": ["*", ["get", "w"], 0.55], "line-opacity": 0.9, "line-dasharray": [0, 4, 3] } });
   }
   // dots sit on a dark halo + white ring so they stay readable on top of the shaded risk areas
-  const dotR = (a, b, c) => ["interpolate", ["linear"], ["zoom"],
-    4, ["case", [">=", ["coalesce", ["get", "pct"], 0], 100], a + 1, a],
-    8, ["case", [">=", ["coalesce", ["get", "pct"], 0], 100], b + 2, b],
-    11, ["case", [">=", ["coalesce", ["get", "pct"], 0], 100], c + 2, c]];
+  const over = ["case", [">=", ["coalesce", ["get", "pct"], 0], 100]];
+  // zoom must be the top-level input, so the optional extra (halo width) is added inside each stop
+  const dotR = (a, b, c, extra = 0) => ["interpolate", ["linear"], ["zoom"],
+    4, [...over, a + 1 + extra, a + extra], 8, [...over, b + 2 + extra, b + extra], 11, [...over, c + 2 + extra, c + extra]];
   map.addLayer({ id: "stations-halo", type: "circle", source: "stations",
-    paint: { "circle-radius": ["+", dotR(3, 5, 8), 2.6], "circle-color": "#1b1f2a", "circle-opacity": 0.7 } });
+    paint: { "circle-radius": dotR(3, 5, 8, 2.6), "circle-color": "#1b1f2a", "circle-opacity": 0.7 } });
   map.addLayer({
     id: "stations-circle", type: "circle", source: "stations",
     paint: {
