@@ -6,10 +6,10 @@ def test_levels():
 
 
 def test_local_scores_use_only_available_inputs():
-    d = {"level": 1.0, "trend": 1.0, "station_txt": "X at 110% of bank, rising fast"}
+    d = {"level": 1.0, "trend": 1.0, "station": {"t": "station", "en": "X", "th": "เอ็กซ์", "prov": "Y", "pct": 110, "trend": "rising_fast"}}
     s = risk.local_scores(d)
     assert len(s) == risk.DAYS and s[0][0] == 1.0
-    assert "110%" in s[0][1][0][1]
+    assert s[0][1][0][1]["pct"] == 110
 
 
 def test_no_inputs_gives_none():

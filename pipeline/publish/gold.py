@@ -29,7 +29,7 @@ def write_stations(stations: list[Station], out: Path) -> Path:
         rows.append({
             "id": s.id, "name_en": s.name_en, "name_th": s.name_th,
             "lat": round(s.lat, 5), "lon": round(s.lon, 5),
-            "river": s.river_name, "basin_en": s.basin_en, "province_en": s.province_en,
+            "river": s.river_name, "basin_en": s.basin_en, "province_en": s.province_en, "province_th": s.province_th,
             "level_msl": s.level_msl, "bank_level": s.bank_level,
             "pct": None if s.pct_capacity is None else round(s.pct_capacity, 1),
             "trend": trend_of(s),

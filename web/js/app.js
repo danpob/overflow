@@ -1,10 +1,74 @@
+const GEOM = {};
 const TREND = ["unknown", "falling", "stable", "rising", "rising_fast"];
-const TREND_LABEL = { unknown: "Unknown", falling: "Falling", stable: "Stable", rising: "Rising", rising_fast: "Rising fast" };
-const TREND_COLOR = { falling: "#2c7fb8", stable: "#8a94a0", rising: "#f0a202", rising_fast: "#d7301f" };
-const RISK_LEVELS = ["Low", "Watch", "Elevated", "High", "Severe"];
+const TREND_COLOR = { falling: "#0a6ee6", stable: "#8a94a0", rising: "#f0a202", rising_fast: "#d7301f" };
 const RISK_COLORS = ["#bfe3b4", "#f7ec9a", "#fbbf66", "#ee6a4a", "#a8222c"];
 const $ = (s) => document.querySelector(s);
+let DAY = 0, RISK = null, META = null, PANEL = null;
+
+// ---------- i18n ----------
+let LANG = "en", STR = {}, PROV_TH = {};
+const THAI_RE = /[฀-๿]/;
+const t = (k, v = {}) => (STR[k] ?? k).replace(/\{(\w+)\}/g, (_, n) => v[n] ?? "");
+const provName = (en) => (en ? (LANG === "th" ? PROV_TH[en] || en : en) : "");
+const lvlName = (i) => t("lvl" + i);
+
+function storedLang() {
+  try { const s = localStorage.getItem("rw_lang"); if (s === "en" || s === "th") return s; } catch (e) { /* storage blocked */ }
+  return (navigator.language || "").toLowerCase().startsWith("th") ? "th" : "en";
+}
+
+function applyStatic() {
+  document.documentElement.lang = LANG;
+  document.title = t("title");
+  document.querySelectorAll("[data-i18n]").forEach((el) => (el.textContent = t(el.dataset.i18n)));
+  document.querySelectorAll("[data-i18n-html]").forEach((el) => (el.innerHTML = t(el.dataset.i18nHtml)));
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => (el.title = t(el.dataset.i18nTitle)));
+  document.querySelectorAll("[data-i18n-aria]").forEach((el) => el.setAttribute("aria-label", t(el.dataset.i18nAria)));
+  $("#days").setAttribute("aria-label", t("days_aria"));
+  document.querySelectorAll("#lang button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.lang === LANG));
+  updateCollapse();
+  if (!META) $("#fresh").textContent = t("loading");
+}
+function updateCollapse() {
+  $("#collapse").textContent = t("key") + ($("#panel").classList.contains("min") ? " ▸" : " ▾");
+}
+
+async function setLang(l, first = false) {
+  LANG = l;
+  try { localStorage.setItem("rw_lang", l); } catch (e) { /* storage blocked */ }
+  if (!STR.__l || STR.__l !== l) {
+    STR = await fetch(`i18n/${l}.json`).then((r) => r.json());
+    STR.__l = l;
+  }
+  applyStatic();
+  if (first) return;
+  setBasemapLang();
+  if (META) { freshness(META); renderDays(); renderWatchBtn(); }
+  renderPanel();
+}
+
+function setBasemapLang() {
+  if (!map.isStyleLoaded() && !map.getStyle()) return;
+  const field = LANG === "th"
+    ? ["coalesce", ["get", "name:th"], ["get", "name"]]
+    : ["coalesce", ["get", "name_en"], ["get", "name:latin"], ["get", "name"]];
+  for (const l of map.getStyle().layers) {
+    const tf = l.layout && l.layout["text-field"];
+    if (l.type === "symbol" && tf && JSON.stringify(tf).includes("name")) map.setLayoutProperty(l.id, "text-field", field);
+  }
+}
+
+// ---------- helpers ----------
+const levelExpr = (prop) => ["match", ["get", prop], 0, RISK_COLORS[0], 1, RISK_COLORS[1], 2, RISK_COLORS[2], 3, RISK_COLORS[3], 4, RISK_COLORS[4], "rgba(0,0,0,0)"];
+function bboxCenter(geom) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  const walk = (c) => (typeof c[0] === "number" ? ((x0 = Math.min(x0, c[0])), (x1 = Math.max(x1, c[0])), (y0 = Math.min(y0, c[1])), (y1 = Math.max(y1, c[1]))) : c.forEach(walk));
+  walk(geom.coordinates);
+  return { center: [(x0 + x1) / 2, (y0 + y1) / 2], bounds: [[x0, y0], [x1, y1]] };
+}
 const getJSON = (u) => fetch(u, { cache: "no-cache" }).then((r) => { if (!r.ok) throw new Error(u + " " + r.status); return r.json(); });
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const isNull = (v) => v === "null" || v == null;
 
 const map = new maplibregl.Map({
   container: "map",
@@ -22,23 +86,26 @@ function freshness(meta) {
   const ageH = (Date.now() - obs.getTime()) / 36e5;
   const hhmm = obs.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" });
   const stale = Object.entries(meta.layers || {}).filter(([, v]) => v.status !== "ok").map(([k]) => k);
-  el.textContent = ageH > 6 ? `⚠ Data is ${Math.round(ageH)} h old (${hhmm} ICT)` : `Updated ${hhmm} ICT`;
+  el.textContent = ageH > 6 ? t("fresh_old", { h: Math.round(ageH), t: hhmm }) : t("fresh_ok", { t: hhmm });
   el.className = "badge " + (ageH > 6 || stale.length ? "warn" : "ok");
-  if (stale.length) el.title = "Stale layers: " + stale.join(", ");
+  el.title = stale.length ? t("fresh_stale_layers", { l: stale.join(", ") }) : "";
 }
 
 function pctColorExpr(prop) {
-  return ["step", ["coalesce", ["get", prop], -1], "#d5d8dc", 0, "#ddd8ee", 50, "#cbc9e2", 70, "#9e9ac8", 90, "#756bb1", 100, "#54278f"];
+  return ["step", ["coalesce", ["get", prop], -1], "#d5d8dc", 0, "#2fa84f", 50, "#e6d630", 70, "#f28c28", 90, "#e0302b", 100, "#7d0b14"];
 }
 
 map.on("load", async () => {
+  await langReady;
   const [meta, rivers, state, stations, provinces] = await Promise.all([
     getJSON("data/meta.json"), getJSON("data/rivers.geojson"), getJSON("data/flow_state.json"),
     getJSON("data/stations_latest.json"), getJSON("data/provinces.geojson"),
   ]);
   const basins = await getJSON("data/basins.geojson");
   const risk = await getJSON("data/basins_risk.json").catch(() => null);
+  META = meta; RISK = risk;
   freshness(meta);
+  setBasemapLang();
 
   // join dynamic state onto static river geometry
   for (const f of rivers.features) {
@@ -51,8 +118,8 @@ map.on("load", async () => {
   // join risk onto basin polygons
   for (const f of basins.features) {
     const r = risk?.basins?.[f.properties.hybas_id];
-    f.properties.score = r ? r.scores[0] : null;
-    f.properties.level = r ? r.levels[0] : null;
+    for (let d = 0; d < 4; d++) f.properties["l" + d] = r ? r.levels[d] : null;
+    GEOM[f.properties.hybas_id] = bboxCenter(f.geometry);
   }
 
   map.addSource("provinces", { type: "geojson", data: provinces });
@@ -63,13 +130,7 @@ map.on("load", async () => {
     data: { type: "FeatureCollection", features: stations.map((s) => ({ type: "Feature", properties: s, geometry: { type: "Point", coordinates: [s.lon, s.lat] } })) },
   });
 
-  map.addLayer({
-    id: "basins-fill", type: "fill", source: "basins",
-    paint: {
-      "fill-color": ["match", ["get", "level"], 0, RISK_COLORS[0], 1, RISK_COLORS[1], 2, RISK_COLORS[2], 3, RISK_COLORS[3], 4, RISK_COLORS[4], "rgba(0,0,0,0)"],
-      "fill-opacity": 0.5,
-    },
-  });
+  map.addLayer({ id: "basins-fill", type: "fill", source: "basins", paint: { "fill-color": levelExpr("l0"), "fill-opacity": 0.4 } });
   map.addLayer({ id: "basins-line", type: "line", source: "basins", paint: { "line-color": "#6b7785", "line-width": 0.7, "line-opacity": 0.7 } });
   map.addLayer({ id: "provinces-hit", type: "fill", source: "provinces", paint: { "fill-color": "#000", "fill-opacity": 0 } });
   map.addLayer({ id: "basin-highlight", type: "line", source: "basins", filter: ["==", ["get", "hybas_id"], -1],
@@ -80,22 +141,26 @@ map.on("load", async () => {
   map.addLayer({ id: "flow-none", type: "line", source: "rivers", filter: ["==", ["get", "has"], 0],
     paint: { "line-color": "#c3cad1", "line-width": 0.6 } });
   // rivers with data: colour by trend, width by mean discharge
-  for (const t of Object.keys(TREND_COLOR)) {
-    map.addLayer({ id: "flow-" + t, type: "line", source: "rivers", filter: ["==", ["get", "trend"], t],
+  for (const tr of Object.keys(TREND_COLOR)) {
+    map.addLayer({ id: "flow-" + tr, type: "line", source: "rivers", filter: ["==", ["get", "trend"], tr],
       layout: { "line-cap": "round" },
-      paint: { "line-color": TREND_COLOR[t], "line-width": ["get", "w"], "line-opacity": 0.45 } });
-    map.addLayer({ id: "flow-anim-" + t, type: "line", source: "rivers", filter: ["==", ["get", "trend"], t],
+      paint: { "line-color": TREND_COLOR[tr], "line-width": ["get", "w"], "line-opacity": 0.45 } });
+    map.addLayer({ id: "flow-anim-" + tr, type: "line", source: "rivers", filter: ["==", ["get", "trend"], tr],
       paint: { "line-color": "#ffffff", "line-width": ["*", ["get", "w"], 0.55], "line-opacity": 0.9, "line-dasharray": [0, 4, 3] } });
   }
+  // dots sit on a dark halo + white ring so they stay readable on top of the shaded risk areas
+  const dotR = (a, b, c) => ["interpolate", ["linear"], ["zoom"],
+    4, ["case", [">=", ["coalesce", ["get", "pct"], 0], 100], a + 1, a],
+    8, ["case", [">=", ["coalesce", ["get", "pct"], 0], 100], b + 2, b],
+    11, ["case", [">=", ["coalesce", ["get", "pct"], 0], 100], c + 2, c]];
+  map.addLayer({ id: "stations-halo", type: "circle", source: "stations",
+    paint: { "circle-radius": ["+", dotR(3, 5, 8), 2.6], "circle-color": "#1b1f2a", "circle-opacity": 0.7 } });
   map.addLayer({
     id: "stations-circle", type: "circle", source: "stations",
     paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"],
-        4, ["case", [">=", ["coalesce", ["get", "pct"], 0], 100], 4, 3],
-        8, ["case", [">=", ["coalesce", ["get", "pct"], 0], 100], 7, 5],
-        11, ["case", [">=", ["coalesce", ["get", "pct"], 0], 100], 10, 8]],
+      "circle-radius": dotR(3, 5, 8),
       "circle-color": pctColorExpr("pct"),
-      "circle-stroke-color": "#2b2150", "circle-stroke-width": 0.9, "circle-opacity": 1,
+      "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.6, "circle-opacity": 1,
     },
   });
   animateFlow();
@@ -103,7 +168,7 @@ map.on("load", async () => {
   // --- layer toggles
   const groups = {
     flow: () => map.getStyle().layers.filter((l) => l.id.startsWith("flow-")).map((l) => l.id),
-    stations: () => ["stations-circle"],
+    stations: () => ["stations-halo", "stations-circle"],
     basins: () => ["basins-fill", "basins-line"],
     provinces: () => ["provinces-line"],
   };
@@ -112,7 +177,7 @@ map.on("load", async () => {
     cb.addEventListener("change", apply);
     apply();
   });
-  $("#collapse").onclick = () => { const m = $("#panel").classList.toggle("min"); $("#collapse").setAttribute("aria-expanded", !m); $("#collapse").textContent = m ? "Key ▸" : "Key ▾"; };
+  $("#collapse").onclick = () => { $("#panel").classList.toggle("min"); updateCollapse(); };
   if (innerWidth < 700) $("#collapse").click();
 
   // --- interactions
@@ -124,12 +189,18 @@ map.on("load", async () => {
   map.on("click", "stations-circle", (e) => { e.originalEvent.stopPropagation_ = true; showStation(e.features[0].properties); });
   map.on("click", "basins-fill", (e) => {
     if (e.defaultPrevented || e.originalEvent.stopPropagation_) return;
-    const hit = map.queryRenderedFeatures(e.point, { layers: ["stations-circle"] });
-    if (hit.length) return;
+    if (map.queryRenderedFeatures(e.point, { layers: ["stations-circle"] }).length) return;
     const prov = map.queryRenderedFeatures(e.point, { layers: ["provinces-hit"] })[0];
-    showBasin(e.features[0].properties, risk, prov?.properties.name);
+    showBasin(e.features[0].properties, prov?.properties.name);
   });
-  $("#close").onclick = () => { $("#detail").hidden = true; map.setFilter("basin-highlight", ["==", ["get", "hybas_id"], -1]); };
+  renderDays();
+  renderWatchBtn();
+  $("#watchbtn").onclick = showWatchlist;
+  $("#days").onclick = (e) => { const b = e.target.closest("button"); if (b) setDay(+b.dataset.d); };
+  // the list follows the map view: refresh the count (and the list, if open) after the map settles
+  let viewTimer;
+  map.on("moveend", () => { clearTimeout(viewTimer); viewTimer = setTimeout(() => { renderWatchBtn(); if (PANEL?.k === "watch") renderWatchlist(); }, 250); });
+  $("#close").onclick = closePanel;
 
   // --- geolocation: centre on the user if they are in Thailand (location never leaves the browser)
   const geo = new maplibregl.GeolocateControl({
@@ -144,7 +215,7 @@ map.on("load", async () => {
     map.once("moveend", () => {
       const hit = map.queryRenderedFeatures(map.project([lon, lat]), { layers: ["basins-fill"] });
       const prov = map.queryRenderedFeatures(map.project([lon, lat]), { layers: ["provinces-hit"] })[0];
-      if (hit.length && risk) showBasin(hit[0].properties, risk, prov?.properties.name);
+      if (hit.length && risk) showBasin(hit[0].properties, prov?.properties.name);
     });
   };
   if ("geolocation" in navigator) {
@@ -161,52 +232,193 @@ function animateFlow() {
   const speed = { falling: 0.6, stable: 0.3, rising: 1, rising_fast: 1.8 };
   const step = {};
   const tick = (ts) => {
-    for (const t of Object.keys(speed)) {
-      const i = Math.floor((ts / 1000) * 8 * speed[t]) % seq.length;
-      if (step[t] !== i && map.getLayer("flow-anim-" + t)) { map.setPaintProperty("flow-anim-" + t, "line-dasharray", seq[i]); step[t] = i; }
+    for (const tr of Object.keys(speed)) {
+      const i = Math.floor((ts / 1000) * 8 * speed[tr]) % seq.length;
+      if (step[tr] !== i && map.getLayer("flow-anim-" + tr)) { map.setPaintProperty("flow-anim-" + tr, "line-dasharray", seq[i]); step[tr] = i; }
     }
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
 }
 
-function showStation(p) {
-  const pct = p.pct === "null" || p.pct == null ? null : +p.pct;
-  const bank = p.bank_level === "null" || p.bank_level == null ? null : (+p.bank_level).toFixed(2) + " m";
-  const lvl = p.level_msl === "null" || p.level_msl == null ? "—" : (+p.level_msl).toFixed(2) + " m";
-  const delta = p.delta === "null" || p.delta == null ? "—" : (+p.delta > 0 ? "+" : "") + (+p.delta).toFixed(2) + " m";
+// ---------- day buttons ----------
+const dayName = (d) => {
+  if (d === 0) return t("day_today");
+  const dt = new Date(new Date(META.generated_at).getTime() + d * 864e5);
+  return dt.toLocaleDateString(LANG === "th" ? "th-TH" : "en-GB", { weekday: "short", timeZone: "Asia/Bangkok" });
+};
+
+function renderDays() {
+  const box = $("#days");
+  box.innerHTML = [0, 1, 2, 3].map((d) => `<button data-d="${d}" aria-pressed="${d === DAY}">${d === 0 ? t("day_today") : dayName(d) + " +" + d}</button>`).join("");
+  box.style.display = RISK ? "" : "none";
+}
+
+function renderWatchBtn() {
+  const n = watchEntries().incoming.length;
+  const b = $("#watchbtn");
+  b.title = t("watch_title");
+  b.innerHTML = `${esc(t("watch_btn"))}${n ? `<b>${n}</b>` : ""}`;
+}
+
+function setDay(d) {
+  DAY = d;
+  document.querySelectorAll("#days button").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.d === d));
+  map.setPaintProperty("basins-fill", "fill-color", levelExpr("l" + d));
+  if (PANEL?.k === "basin") renderPanel();   // keep an open panel in step
+}
+
+// ---------- driver sentences (data carries structure, text is made here) ----------
+function stationName(d) {
+  if (LANG === "th") return d.th || d.en;
+  return THAI_RE.test(d.en) ? t("anon_station", { prov: provName(d.prov) }) : d.en;
+}
+function fmtDriver(d) {
+  switch (d.t) {
+    case "station": return t("d_station", { name: stationName(d), pct: d.pct, trend: t("trn_" + d.trend).toLowerCase() });
+    case "rain_obs": return t("d_rain_obs", { mm: d.mm });
+    case "rain_fc": return t("d_rain_fc", { mm: d.mm });
+    case "disc": return t("d_disc", { x: d.x });
+    case "up": return t("d_up", { prov: provName(d.prov) || t("up_generic"), lvl: lvlName(d.lvl), h: d.h });
+    default: return "";
+  }
+}
+
+// ---------- panels ----------
+function closePanel() {
+  PANEL = null;
+  $("#detail").hidden = true;
+  map.setFilter("basin-highlight", ["==", ["get", "hybas_id"], -1]);
+}
+
+function renderPanel() {
+  if (!PANEL) return;
+  if (PANEL.k === "watch") renderWatchlist();
+  else if (PANEL.k === "basin") renderBasin();
+  else if (PANEL.k === "station") renderStation();
+}
+
+function showStation(p) { PANEL = { k: "station", p }; map.setFilter("basin-highlight", ["==", ["get", "hybas_id"], -1]); renderStation(); }
+function showWatchlist() { PANEL = { k: "watch", more: false }; map.setFilter("basin-highlight", ["==", ["get", "hybas_id"], -1]); renderWatchlist(); }
+function showBasin(p, where, fromList = false) {
+  PANEL = { k: "basin", p, where, fromList: fromList || (PANEL?.k === "basin" && PANEL.fromList) };
+  map.setFilter("basin-highlight", ["==", ["get", "hybas_id"], +p.hybas_id]);
+  renderBasin();
+}
+
+function renderStation() {
+  const p = PANEL.p;
+  const pct = isNull(p.pct) ? null : +p.pct;
+  const bank = isNull(p.bank_level) ? "—" : (+p.bank_level).toFixed(2) + " m";
+  const lvl = isNull(p.level_msl) ? "—" : (+p.level_msl).toFixed(2) + " m";
+  const delta = isNull(p.delta) ? "—" : (+p.delta > 0 ? "+" : "") + (+p.delta).toFixed(2) + " m";
+  const prov = LANG === "th" && !isNull(p.province_th) ? p.province_th : (isNull(p.province_en) ? "" : provName(p.province_en));
+  let title = LANG === "th" ? p.name_th || p.name_en : p.name_en;
+  let extra = "";
+  if (LANG === "en" && THAI_RE.test(title)) { extra = title; title = t("anon_station", { prov }); }
+  const river = LANG === "th" && !isNull(p.river) ? p.river : "";   // river names exist in Thai only
+  const sub = [river, prov, extra].filter(Boolean).map(esc).join(" · ");
+  const trend = t("trn_" + (p.trend in { falling: 1, stable: 1, rising: 1, rising_fast: 1 } ? p.trend : "unknown"));
   $("#detail-body").innerHTML = `
-    <h2>${esc(p.name_en)}</h2><div class="sub">${esc(p.river || "")} ${p.province_en && p.province_en !== "null" ? "· " + esc(p.province_en) : ""}</div>
+    <h2>${esc(title)}</h2><div class="sub">${sub}</div>
     <table>
-      <tr><td>Water level (MSL)</td><td>${lvl}</td></tr>
-      <tr><td>Bank level</td><td>${bank || "—"}</td></tr>
-      <tr><td>% of bank capacity</td><td><b>${pct == null ? "—" : pct.toFixed(0) + "%"}</b></td></tr>
-      <tr><td>Change since last reading</td><td>${delta} (${TREND_LABEL[p.trend] || "—"})</td></tr>
-      <tr><td>Observed</td><td>${esc(p.observed_at || "—")} ICT</td></tr>
-      <tr><td>Source</td><td>${esc(p.source)}</td></tr>
+      <tr><td>${t("s_level")}</td><td>${lvl}</td></tr>
+      <tr><td>${t("s_bank")}</td><td>${bank}</td></tr>
+      <tr><td>${t("s_pct")}</td><td><b>${pct == null ? "—" : pct.toFixed(0) + "%"}</b></td></tr>
+      <tr><td>${t("s_change")}</td><td>${delta} (${trend})</td></tr>
+      <tr><td>${t("s_observed")}</td><td>${esc(p.observed_at || "—")} ${LANG === "th" ? "น." : "ICT"}</td></tr>
+      <tr><td>${t("s_source")}</td><td>${esc(p.source)}</td></tr>
     </table>`;
   $("#detail").hidden = false;
 }
 
-function showBasin(p, risk, where) {
-  const r = risk?.basins?.[p.hybas_id];
-  map.setFilter("basin-highlight", ["==", ["get", "hybas_id"], +p.hybas_id]);
-  if (!r) {
-    $("#detail-body").innerHTML = `<h2>Drainage area</h2><div class="sub">Risk score not available yet.</div>`;
-    $("#detail").hidden = false; return;
+// "Incoming" = risk rising within 3 days, or a peak is on its way from an upstream area. Scoped to the map view.
+const LVL_MIN_UP = 1, LVL_MIN_RISE = 2, VIEW_CAP = 8;
+function watchEntries() {
+  if (!RISK) return { incoming: [], steady: 0 };
+  const bounds = map.getBounds();
+  const incoming = []; let steady = 0;
+  for (const [id, r] of Object.entries(RISK.basins)) {
+    const g = GEOM[id];
+    if (!g || !bounds.contains(g.center)) continue;
+    const peak = Math.max(...r.scores), pd = r.scores.indexOf(peak), lvl = r.levels[pd];
+    const rises = Math.max(...r.scores.slice(1)) - r.scores[0] >= 5 && lvl >= LVL_MIN_RISE;
+    const ups = (r.upstream || []).filter((u) => u.level >= 2 && u.eta_h != null && u.eta_h <= 72)
+      .sort((a, b) => b.level - a.level || a.eta_h - b.eta_h);
+    const upstream = lvl >= LVL_MIN_UP && ups.length ? ups[0] : null;
+    if (rises || upstream) incoming.push({ id, r, peak, pd, lvl, rises, upstream });
+    else if (r.levels[0] >= 3) steady++;
   }
-  const days = ["Today", "+1 day", "+2 days", "+3 days"];
-  const drivers = r.drivers.map((d) => `<li>${esc(d)}</li>`).join("") || "<li>No significant drivers</li>";
-  const ups = (r.upstream || []).map((u) => `<li>Upstream area ${u.id} — risk ${RISK_LEVELS[u.level]}${u.eta_h != null ? `, peak reaches here in ~${u.eta_h} h` : ""}</li>`).join("");
-  $("#detail-body").innerHTML = `
-    <h2>${where ? "Near " + esc(where) : "Drainage area"}</h2>
-    <div class="sub">The outlined <b>drainage area</b> — all land whose rain flows to the same river stretch${r.name && r.name !== "Sub-basin" ? " (" + esc(r.name) + ")" : ""}. It covers ${esc((r.provinces || []).join(", ") || "—")} and gets one score.</div>
-    <div class="sub">Risk today: <span class="pill" style="background:${r.levels[0] === 0 ? "#4f8f45" : RISK_COLORS[r.levels[0]]};color:${r.levels[0] === 1 ? "#222" : "#fff"}">${RISK_LEVELS[r.levels[0]]} · ${r.scores[0]}</span></div>
-    <table>${r.scores.map((s, i) => `<tr><td>${days[i]}</td><td>${RISK_LEVELS[r.levels[i]]} (${s})</td></tr>`).join("")}</table>
-    <h3 style="font-size:12px;margin:12px 0 2px;color:var(--mut)">WHY</h3><ol>${drivers}</ol>
-    ${ups ? `<h3 style="font-size:12px;margin:12px 0 2px;color:var(--mut)">UPSTREAM AREAS FEEDING THIS ONE</h3><ol>${ups}</ol>` : ""}
-    <div class="sub" style="margin-top:10px">Rule-based indicator, not an official forecast.</div>`;
-  $("#detail").hidden = false;
+  incoming.sort((a, b) => b.peak - a.peak || (a.upstream?.eta_h ?? 99) - (b.upstream?.eta_h ?? 99));
+  return { incoming, steady };
 }
 
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function entryReason(e) {
+  const lines = [];
+  if (e.upstream) {
+    const pv = RISK.basins[e.upstream.id]?.provinces?.[0];
+    lines.push(t("w_up", { prov: provName(pv) || t("up_generic"), lvl: lvlName(e.upstream.level), h: e.upstream.eta_h }));
+  }
+  if (e.rises) lines.push(t("w_rising", { lvl: lvlName(e.lvl), day: dayName(e.pd) }));
+  return lines;
+}
+
+function renderWatchlist() {
+  const { incoming, steady } = watchEntries();
+  const shown = PANEL.more ? incoming.slice(0, 30) : incoming.slice(0, VIEW_CAP);
+  const rest = incoming.length - shown.length;
+  const summary = t(incoming.length ? "w_summary" : "w_summary0", { a: incoming.length, b: steady });
+  $("#detail-body").innerHTML = `
+    <h2>${t("w_title")}</h2>
+    <div class="sub">${t("w_sub")}</div>
+    <div class="sub" style="color:var(--fg)">${summary}</div>
+    ${shown.map((e) => `<button class="wi" data-id="${e.id}"><div class="wt"><b>${esc(t("near", { x: provName(e.r.provinces[0]) || "—" }))}</b>
+        <span class="pill" style="background:${e.lvl === 2 ? "#e08a1e" : e.lvl === 1 ? "#c9b400" : RISK_COLORS[e.lvl]}">${lvlName(e.lvl)} · ${e.pd === 0 ? t("now") : esc(dayName(e.pd))}</span></div>
+        ${entryReason(e).map((x) => `<div class="wd">${esc(x)}</div>`).join("")}</button>`).join("")}
+    ${incoming.length ? "" : `<div class="sub">${t("w_empty")}</div>`}
+    ${rest > 0 ? `<button class="more" id="more">${t("w_more", { n: rest })}</button>` : ""}
+    ${map.getZoom() < 7 && incoming.length > VIEW_CAP ? `<div class="sub" style="margin-top:6px">${t("w_zoom")}</div>` : ""}
+    <div class="sub" style="margin-top:8px">${t("disclaimer")}</div>`;
+  $("#detail").hidden = false;
+  const m = $("#more"); if (m) m.onclick = () => { PANEL.more = true; renderWatchlist(); };
+  $("#detail-body").querySelectorAll(".wi").forEach((b) => (b.onclick = () => {
+    const id = b.dataset.id, g = GEOM[id], r = RISK.basins[id];
+    map.fitBounds(g.bounds, { padding: { top: 140, bottom: 160, left: 40, right: 40 }, maxZoom: 8.5, duration: 900 });
+    showBasin({ hybas_id: id }, r.provinces[0], true);
+  }));
+}
+
+function renderBasin() {
+  const { p, where, fromList } = PANEL;
+  const r = RISK?.basins?.[p.hybas_id];
+  const back = fromList ? `<button class="back" id="back">${t("back")}</button>` : "";
+  if (!r) {
+    $("#detail-body").innerHTML = `${back}<h2>${t("area_h")}</h2><div class="sub">${t("no_score")}</div>`;
+    $("#detail").hidden = false; return;
+  }
+  const lvl = r.levels[DAY];
+  const drivers = (r.drivers_by_day[DAY] || []).map((d) => `<li>${esc(fmtDriver(d))}</li>`).join("") || `<li>${t("no_drivers")}</li>`;
+  const ups = (r.upstream || []).map((u) => {
+    const pv = RISK.basins[u.id]?.provinces?.[0];
+    return `<li>${esc(t("up_item", { prov: provName(pv) || t("up_generic"), lvl: lvlName(u.level) }))}${u.eta_h != null ? esc(t("up_eta", { h: u.eta_h })) : ""}</li>`;
+  }).join("");
+  const river = LANG === "th" && r.name && r.name !== "Sub-basin" ? ` (${esc(r.name)})` : "";
+  const provs = (r.provinces || []).map(provName).join(LANG === "th" ? " " : ", ") || "—";
+  const when = DAY === 0 ? t("risk_today") : t("risk_on", { d: dayName(DAY) });
+  const pillBg = lvl === 0 ? "#4f8f45" : lvl === 2 ? "#e08a1e" : RISK_COLORS[lvl];
+  $("#detail-body").innerHTML = `${back}
+    <h2>${where ? esc(t("near", { x: provName(where) })) : t("area_h")}</h2>
+    <div class="sub">${t("area_desc", { river, provs: esc(provs) })}</div>
+    <div class="sub">${esc(when)} <span class="pill" style="background:${pillBg};color:${lvl === 1 ? "#222" : "#fff"}">${lvlName(lvl)} · ${r.scores[DAY]}</span></div>
+    <table>${r.scores.map((s, i) => `<tr class="${i === DAY ? "sel" : ""}"><td>${i === 0 ? t("today") : esc(dayName(i)) + " (+" + i + ")"}</td><td>${lvlName(r.levels[i])} (${s})</td></tr>`).join("")}</table>
+    <h3 style="font-size:12px;margin:12px 0 2px;color:var(--mut)">${t("why")}</h3><ol>${drivers}</ol>
+    ${ups ? `<h3 style="font-size:12px;margin:12px 0 2px;color:var(--mut)">${t("upstream_h")}</h3><ol>${ups}</ol>` : ""}
+    <div class="sub" style="margin-top:10px">${t("disclaimer")}</div>`;
+  $("#detail").hidden = false;
+  const bk = $("#back"); if (bk) bk.onclick = showWatchlist;
+}
+
+// ---------- boot ----------
+document.querySelectorAll("#lang button").forEach((b) => (b.onclick = () => setLang(b.dataset.lang)));
+var langReady = Promise.all([fetch("i18n/provinces_th.json").then((r) => r.json()).catch(() => ({})), setLang(storedLang(), true)])
+  .then(([pt]) => { PROV_TH = pt; });

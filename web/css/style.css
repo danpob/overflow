@@ -1,14 +1,15 @@
-:root{--bg:#fff;--fg:#14202b;--mut:#5b6b79;--line:#d9e0e6;--card:rgba(255,255,255,.96);--acc:#1b6ca8}
+:root{--bar-h:56px;--bg:#fff;--fg:#14202b;--mut:#5b6b79;--line:#d9e0e6;--card:rgba(255,255,255,.96);--acc:#1b6ca8}
 @media(prefers-color-scheme:dark){:root{--bg:#0f1a24;--fg:#e8eef3;--mut:#9fb0be;--line:#2a3b49;--card:rgba(16,28,39,.96);--acc:#6bb6e8}}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--fg);background:var(--bg)}
 #map{position:fixed;inset:0}
-#bar{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 16px;background:var(--card);border-bottom:1px solid var(--line);z-index:5}
+#bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;padding:8px 16px;flex-wrap:wrap;background:var(--card);border-bottom:1px solid var(--line);z-index:5}
 .brand{font-weight:700;font-size:16px}.brand small{font-weight:400;color:var(--mut);margin-left:6px}
 .logo{color:var(--acc)}
+.brand{margin-right:auto}
 .badge{padding:3px 10px;border-radius:99px;font-size:12px;border:1px solid var(--line);white-space:nowrap}
 .badge.ok{border-color:#2e9e5b;color:#2e9e5b}.badge.warn{background:#fff3cd;border-color:#e0a800;color:#7a5a00}
-#panel{position:fixed;top:56px;left:12px;width:262px;max-height:calc(100% - 110px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;z-index:4}
+#panel{position:fixed;top:calc(var(--bar-h) + 4px);left:12px;width:262px;max-height:calc(100% - 110px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;z-index:4}
 #collapse{border:0;background:none;color:var(--fg);font:600 13px system-ui;padding:0 0 6px;cursor:pointer;width:100%;text-align:left}
 #panel.min #panel-body{display:none}#panel.min #collapse{padding:0}
 .intro{margin:0 0 8px;font-size:12px;color:var(--mut)}
@@ -20,9 +21,9 @@ html,body{margin:0;height:100%;font:14px/1.4 system-ui,-apple-system,"Segoe UI",
 .row{display:flex;align-items:center;gap:8px;padding:1px 0 1px 22px;font-size:12.5px}.row.muted{color:var(--mut)}
 .sw{display:inline-block;width:24px;height:4px;border-radius:2px}.sw.thin{height:1.5px}
 .area{display:inline-block;width:24px;height:12px;border-radius:2px;border:1px solid rgba(0,0,0,.25)}
-.dot{display:inline-block;width:11px;height:11px;border-radius:50%;border:1px solid #2b2150;margin:0 6.5px}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1.5px rgba(27,31,42,.75);margin:0 6.5px}
 .dot.big{width:15px;height:15px;margin:0 4.5px}
-#detail{position:fixed;top:56px;right:12px;width:320px;max-height:calc(100% - 110px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;z-index:4}
+#detail{position:fixed;top:calc(var(--bar-h) + 4px);right:12px;width:320px;max-height:calc(100% - 110px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;z-index:4}
 #detail h2{margin:0 0 2px;font-size:16px;padding-right:20px}
 #detail .sub{color:var(--mut);font-size:12px;margin-bottom:10px}
 #detail table{width:100%;border-collapse:collapse}#detail td{padding:3px 0;border-bottom:1px solid var(--line)}#detail td:last-child{text-align:right;font-variant-numeric:tabular-nums}
@@ -35,6 +36,39 @@ html,body{margin:0;height:100%;font:14px/1.4 system-ui,-apple-system,"Segoe UI",
 @media(max-width:700px){
   .brand small{display:none}
   #panel{top:auto;bottom:40px;width:auto;left:8px;right:8px;max-height:46%}
-  #detail{top:56px;left:8px;right:8px;width:auto;max-height:44%}
+  #detail{top:calc(var(--bar-h) + 4px);left:8px;right:8px;width:auto;max-height:44%}
   #foot{font-size:10px}
 }
+
+#days{display:flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}
+#days button{border:0;background:none;color:var(--fg);font:500 12.5px system-ui;padding:5px 12px;cursor:pointer;white-space:nowrap}
+#days button+button{border-left:1px solid var(--line)}
+#days button[aria-pressed=true]{background:var(--acc);color:#fff;font-weight:600}
+@media(prefers-color-scheme:dark){#days button[aria-pressed=true]{color:#0f1a24}}
+.badge.btn{background:none;color:var(--fg);cursor:pointer;font:600 12px system-ui}
+.badge.btn:hover{border-color:var(--acc)}
+.badge.btn b{background:#d7301f;color:#fff;border-radius:99px;padding:0 6px;margin-left:4px}
+#detail .back{border:0;background:none;color:var(--acc);cursor:pointer;padding:0 0 6px;font:13px system-ui}
+#detail .fl{display:flex;gap:6px;align-items:center;margin:2px 0 8px;font-size:12px;color:var(--mut)}
+.wi{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:8px 0;color:var(--fg);cursor:pointer;font:inherit}
+.wi:hover{background:rgba(127,127,127,.08)}
+.wi .wt{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.wi .wd{font-size:12px;color:var(--mut);margin-top:2px}
+.wi .up{color:#d7301f;font-weight:600}
+tr.sel td{font-weight:700}
+@media(max-width:700px){
+  :root{--bar-h:92px}
+  #bar{padding:6px 10px;gap:6px}
+  #days{order:3}#watchbtn{order:4;margin-left:auto}
+  #days button{padding:5px 9px}
+}
+
+#lang{display:flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}
+#lang button{border:0;background:none;color:var(--fg);font:600 12px system-ui;padding:5px 10px;cursor:pointer}
+#lang button+button{border-left:1px solid var(--line)}
+#lang button[aria-pressed=true]{background:var(--acc);color:#fff}
+@media(prefers-color-scheme:dark){#lang button[aria-pressed=true]{color:#0f1a24}}
+html[lang=th] body{font-family:"Sarabun","Noto Sans Thai",system-ui,-apple-system,"Thonburi",sans-serif;line-height:1.5}
+@media(max-width:700px){#fresh{order:2}#lang{order:2}}
+.more{display:block;width:100%;margin-top:6px;padding:7px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--acc);font:600 13px system-ui;cursor:pointer}
+.wi .wd+.wd{margin-top:1px}

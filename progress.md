@@ -62,10 +62,10 @@ See the end of the chat reply; tracked here so they are not lost.
 - [ ] 2.6 Sanity check against a past event; tune weights; document results
 
 ## 6. Phase 3 — Time and context (F6–F10)
-- [ ] 3.1 History archive (Parquet on Release assets) + time-indexed gold files
-- [ ] 3.2 Time slider (−7 d → +3 d) and playback
+- [~] 3.1 History archive: only needed internally for 24 h trends (later); no user-facing history
+- [x] 3.2 Replaced by forecast day buttons (+0..+3) — past days dropped by decision
 - [ ] 3.3 Rainfall overlay, GISTDA flood extent overlay, reservoir markers
-- [ ] 3.4 Thai/English i18n
+- [x] 3.4 Thai/English toggle (EN | ไทย): all UI text, legend, panels, risk reasons, province names, basemap labels; choice remembered, defaults to browser language
 
 ## 7. Phase 4 — Hardening (F12, F13, ML)
 - [ ] 4.1 Shareable URLs
@@ -90,9 +90,14 @@ See the end of the chat reply; tracked here so they are not lost.
 - [x] Web: MapLibre map, basin risk choropleth, animated flow arrows, stations + popups, "why" panel, freshness badge, disclaimer, legend, mobile layout
 - [x] Workflows written (pipeline.yml cron+Pages deploy+failure issue, ci.yml) - untested until on GitHub
 - [x] Deviations from PRD: flow state is `flow_state.json` joined client-side to static rivers (smaller than flow_vectors.geojson); deploy via Pages artifact (no force-pushed gh-pages); animated dashes via MapLibre instead of deck.gl; terrain factor uses elevation proxy (no HAND yet); reservoirs weight unused (dam endpoint not found)
-- Not done: time slider, rainfall/flood-extent/reservoir layers, i18n Thai, history archive, back-test
+- [x] Forecast day buttons (Today/+1/+2/+3) recolour the map and the open panel; "Heading your way" list ranks areas at Elevated+ within 3 days, with a "getting worse" filter
+- Decision (user): no historical view / past-days slider. History archive kept only as an optional later way to compute true 24 h trends (item 3)
+- Not done: rainfall/flood-extent/reservoir layers, true 24 h trend, back-test
 - Known: gold payload 3.1 MB uncompressed (gzip on Pages is much smaller); "trend" = change since previous reading, not 24 h
 
 ## 9. Log
 - 2026-10-03 — PRD analysed, progress plan created.
 - 2026-10-03 — Local prototype built end to end; browser verification pending.
+- 2026-10-03 — Added forecast day buttons and Heading-your-way watchlist; dropped historical slider.
+- 2026-10-03 — Added English/Thai language toggle (i18n JSON files, structured risk reasons, Thai province names).
+- 2026-10-03 — "Heading your way" now scoped to the map view, closed by default; incoming = risk rising >=5 pts (Elevated+) or an Elevated+ upstream peak arriving within 72 h; capped at 8 with Show more; count of already-High steady areas shown as a summary.
