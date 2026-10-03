@@ -6,8 +6,10 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · 🔒 blocked on user in
 ## 0. Status snapshot
 - **Live:** https://danpob.github.io/overflow/ · repo https://github.com/danpob/overflow (public) · data refreshes about every 3 h via GitHub Actions.
 - App name: **Overflow** (renamed from Risewise). English + Thai UI.
-- Working now: national map with drainage-area risk (Today to +3 days), animated river flow, 808 water-level stations, "Heading your way" list scoped to the map view, day buttons, EN/TH toggle, geolocation, mobile layout.
-- Next: see §10 backlog. Top candidates: road-impact cues, true 24 h trend, rainfall overlay, GISTDA flood extent, reservoirs.
+- Working now: national map with drainage-area risk (Today to +3 days), animated river flow, 808 water-level stations (green-to-red), **road-crossing markers** (solid = water measured over the bank nearby, hollow = area forecast High+), **khlongs and small rivers** drawn while their station is at 90%+ of bank, "Heading your way" list scoped to the map view, day buttons (Today / +1 / +2 / +3 days), EN/TH toggle, geolocation, mobile layout with collapsible footer.
+- Decisions: no history view, no GISTDA, no "roads to watch" list, no analytics for now, ThaiWater terms left as is (credited and linked).
+- Next candidates (see §10): calibrate risk against a past flood, true 24 h trend, rainfall overlay, reservoirs, crossings on flagged khlongs.
+- Tests: 13 pass (`pytest`); lint clean (`ruff`). CI/deploy: GitHub Actions, last deploy succeeded.
 
 ## 1. Working assumptions (used unless the user says otherwise)
 | Topic | Default | PRD ref |
@@ -50,12 +52,12 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · 🔒 blocked on user in
 - [x] 2.3 Rule-based risk with config weights, downstream propagation with lags, structured drivers
 - [x] 2.4 `basins_risk.json` D0 to D+3 with drivers by day and upstream list
 - [x] 2.5 Choropleth, key, "why" panel, upstream list with arrival hours
-- [ ] 2.6 Calibrate against a past event (weights are untuned; list may over-flag)
+- [ ] 2.6 Calibrate against a past event (weights are untuned; list may over-flag). Highest-value next step for trust.
 
 ## 6. Phase 3 — Time and context (F6–F10)
 - [~] 3.1 History archive: only needed internally for 24 h trends (later); no user-facing history
 - [x] 3.2 Replaced by forecast day buttons (+0..+3) — past days dropped by decision
-- [ ] 3.3 Rainfall overlay, GISTDA flood extent overlay, reservoir markers (GISTDA flood-extent API needs a free API key; open data portal opendata.gistda.or.th)
+- [ ] 3.3 Rainfall overlay and reservoir markers. GISTDA flood extent dropped by decision; road and khlong cues were built instead (see §8b).
 - [x] 3.4 Thai/English toggle (EN | ไทย): all UI text, legend, panels, risk reasons, province names, basemap labels; choice remembered, defaults to browser language
 
 ## 7. Phase 4 — Hardening (F12, F13, ML)
@@ -68,6 +70,8 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · 🔒 blocked on user in
 - ThaiWater API is undocumented and no usage terms were found; the app credits and links to ThaiWater
 - Risk scores are rule-based, untuned and unvalidated; "Heading your way" may over-flag
 - Scores are per drainage area (large); two places in one area get the same score
+- Road crossings show water near a crossing, never whether a road is open or closed (key and panel say so)
+- 37 stations have no khlong line (name not in OpenStreetMap, no stream within 500 m); 145 others use an approximate HydroRIVERS stream
 - GloFAS cells off the river are discarded (82 of 185 outlets); those basins rely on stations and rain
 - "Trend" is change since the previous reading, not a 24 h trend
 - Scheduled GitHub workflows pause after 60 days without repo activity
@@ -102,9 +106,10 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · 🔒 blocked on user in
 ## 10. Backlog / ideas
 - ~~Road-impact cues~~ built as **road crossings** (see §8b). Possible follow-ups: observed flood extent or official closure feed as a third, stronger tier; district names for repeated province labels.
 - True 24 h trend (needs a rolling history archive in the pipeline; no user-facing history view).
-- Rainfall overlay, GISTDA observed flood extent, reservoir markers.
+- Rainfall overlay and reservoir markers.
 - Calibration against a past flood event; tune risk thresholds.
 - Optional: finer drainage areas (level 8), shareable URLs.
 - Khlong follow-ups: crossings on flagged khlongs (road bridges over them); stations whose khlong is not in OpenStreetMap still show only as dots.
 - 2026-10-04 — Road crossings feature built (OSM bridges x HydroRIVERS main stems x stations), tests added (10 pass).
 - 2026-10-04 — Khlong stretches built (OSM name match + HydroRIVERS fallback), tests added (13 pass).
+- 2026-10-04 — Progress status refreshed; everything committed and deployed (road crossings, khlongs).
